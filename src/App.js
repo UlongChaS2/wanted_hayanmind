@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import 'intersection-observer';
 import { LIMIT } from './utils/constants';
 import Comment from './component/Comment/Comment';
@@ -8,13 +8,12 @@ export default function App() {
   const [totalData, setTotalData] = useState([]);
   const [loading, setIsLoading] = useState(false);
   const [page, setPage] = useState(1);
-  const [target, setTarget] = useState(null);
+  const target = useRef(null);
 
-  // data fetch
-  const getItems = () => {
+  useEffect(() => {
     setIsLoading(true);
     fetch(
-      `https://jsonplaceholder.typicode.com/comments?_page=${page}&_limit=LIMIT`,
+      `https://jsonplaceholder.typicode.com/comments?_page=${page}&_limit=${LIMIT}`,
       {
         method: 'GET',
       }
@@ -24,42 +23,27 @@ export default function App() {
         setTotalData((prev) => prev.concat(data));
         setIsLoading(false);
       });
-  };
-
-  // 초기 아이템 로딩
-  useEffect(() => {
-    getItems();
-    // 이슈 1. page 증가x, 최신 page를 못찾았던 이슈
   }, [page]);
 
-  // IntersectionObserver Callback
-  const onIntersect = ([entry], observer) => {
-    if (entry.isIntersecting) {
-      // 이슈 3. 초기 마운트때 20개.
-      if (!loading) {
-        console.log('entry :', entry);
-        console.log('entry.isIntersecting : ', entry.isIntersecting);
-        // 이슈 2. 무한 page 증식
-        setPage((prev) => prev + 1);
-      }
-    }
+  const onIntersect = ([entry]) => {
+    if (entry.isIntersecting && !loading) setPage((prev) => prev + 1);
   };
 
   useEffect(() => {
     let observer;
     if (target) {
       observer = new IntersectionObserver(onIntersect, { threshold: 0.5 });
-      observer.observe(target);
+      observer.observe(target.current);
     }
     return () => observer && observer.disconnect();
-  }, [target, loading]);
+  }, [loading]);
 
   return (
     <Container>
       <Wrap>
         <Comment data={totalData} />
       </Wrap>
-      <Loding ref={setTarget}>{loading && 'Loading...'}</Loding>
+      <Loding ref={target}>{loading && 'Loading...'}</Loding>
     </Container>
   );
 }
